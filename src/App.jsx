@@ -122,7 +122,7 @@ export default function App() {
     }
   };
 
-  // Effect to recalculate sizes when quality, format, or scale changes
+  // Effect to recalculate sizes when settings change
   useEffect(() => {
     const recalculateEstimates = async () => {
       const filesToUpdate = files.filter(f => 
@@ -133,9 +133,7 @@ export default function App() {
       if (filesToUpdate.length === 0) return;
 
       setFiles(prev => prev.map(f => 
-        filesToUpdate.some(updateFile => updateFile.id === f.id) 
-          ? { ...f, status: 'estimating' } 
-          : f
+        filesToUpdate.some(updateFile => updateFile.id === f.id) ? { ...f, status: 'estimating' } : f
       ));
 
       for (const fileObj of filesToUpdate) {
@@ -158,10 +156,7 @@ export default function App() {
       }
     };
 
-    const timeoutId = setTimeout(() => {
-      recalculateEstimates();
-    }, 300); 
-
+    const timeoutId = setTimeout(() => recalculateEstimates(), 300); 
     return () => clearTimeout(timeoutId);
   }, [quality, format, scale, files]);
 
@@ -212,18 +207,25 @@ export default function App() {
     setFiles([]);
   };
 
+  // --- AUTOMATIC DOWNLOAD LOGIC IMPLEMENTED HERE ---
   const processAll = async () => {
     setIsProcessingAll(true);
+    const currentQueue = [...files]; // Lock in the current files array
     
-    for (let i = 0; i < files.length; i++) {
-      if (files[i].status !== 'error' && files[i].status !== 'processing') {
-        setFiles(prev => prev.map((f, index) => index === i ? { ...f, status: 'processing' } : f));
+    for (const fileObj of currentQueue) {
+      if (fileObj.status !== 'error') {
         
-        const blob = await generateCompressedBlob(files[i].originalFile, quality, format, scale);
+        // 1. Mark as processing
+        setFiles(prev => prev.map(f => f.id === fileObj.id ? { ...f, status: 'processing' } : f));
+        
+        // 2. Generate Final Blob
+        const blob = await generateCompressedBlob(fileObj.originalFile, quality, format, scale);
         
         if (blob) {
           const compressedUrl = URL.createObjectURL(blob);
-          setFiles(prev => prev.map((f, index) => index === i ? { 
+          
+          // 3. Update File Status to Done
+          setFiles(prev => prev.map(f => f.id === fileObj.id ? { 
             ...f, 
             status: 'done',
             compressedBlob: blob,
@@ -232,8 +234,24 @@ export default function App() {
             estimatedSize: blob.size,
             outputFormat: format
           } : f));
+
+          // 4. Force Browser to Download Automatically
+          const extension = format === 'jpeg' ? 'jpg' : 'webp';
+          const originalNameWithoutExt = fileObj.name.substring(0, fileObj.name.lastIndexOf('.')) || fileObj.name;
+          const newFileName = `${originalNameWithoutExt}_compressed.${extension}`;
+
+          const link = document.createElement('a');
+          link.href = compressedUrl;
+          link.download = newFileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          // Give browser 300ms to process download so it doesn't block multiple files
+          await new Promise(resolve => setTimeout(resolve, 300));
+
         } else {
-          setFiles(prev => prev.map((f, index) => index === i ? { ...f, status: 'error' } : f));
+          setFiles(prev => prev.map(f => f.id === fileObj.id ? { ...f, status: 'error' } : f));
         }
       }
     }
