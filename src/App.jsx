@@ -9,14 +9,12 @@ import {
   X,
   FileImage,
   RefreshCw,
-  Image as ImageIcon,
   Maximize2
 } from 'lucide-react';
 
 // --- Helper Functions ---
 const formatBytes = (bytes, decimals = 2) => {
-  if (bytes === 0) return '0 Bytes';
-  if (!bytes) return '-';
+  if (bytes === 0 || !bytes) return '0 Bytes';
   const k = 1024;
   const dm = decimals < 0 ? 0 : decimals;
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
@@ -27,7 +25,7 @@ const formatBytes = (bytes, decimals = 2) => {
 const calculateSavings = (original, compressed) => {
   if (!original || !compressed || original === 0) return 0;
   const savings = ((original - compressed) / original) * 100;
-  return savings > 0 ? savings.toFixed(1) : 0;
+  return savings !== 0 ? savings.toFixed(1) : 0;
 };
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -35,9 +33,9 @@ const generateId = () => Math.random().toString(36).substring(2, 9);
 // --- Main Component ---
 export default function App() {
   const [files, setFiles] = useState([]);
-  const [quality, setQuality] = useState(80); // 0-100
-  const [format, setFormat] = useState('jpeg'); // 'jpeg' or 'webp'
-  const [scale, setScale] = useState(100); // 10-100%
+  const [quality, setQuality] = useState(80); 
+  const [format, setFormat] = useState('jpeg'); 
+  const [scale, setScale] = useState(100); 
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessingAll, setIsProcessingAll] = useState(false);
   const fileInputRef = useRef(null);
@@ -54,8 +52,6 @@ export default function App() {
   }, []);
 
   // --- Core Compression Logic ---
-  // We use this to get the blob without necessarily marking it as "done" yet, 
-  // so we can show real-time estimates.
   const generateCompressedBlob = (originalFile, targetQuality, targetFormat, targetScale = 100) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -81,9 +77,7 @@ export default function App() {
           const mimeType = `image/${targetFormat}`;
           const qualityFloat = targetQuality / 100;
 
-          canvas.toBlob((blob) => {
-            resolve(blob);
-          }, mimeType, qualityFloat);
+          canvas.toBlob((blob) => resolve(blob), mimeType, qualityFloat);
         };
         img.onerror = () => resolve(null);
       };
@@ -96,13 +90,12 @@ export default function App() {
     const imageFiles = Array.from(newFiles).filter(file => file.type.startsWith('image/'));
     if (imageFiles.length === 0) return;
 
-    // Create initial objects
     const newFileObjects = imageFiles.map(file => ({
       id: generateId(),
       originalFile: file,
       name: file.name,
       originalSize: file.size,
-      status: 'estimating', // We start by estimating the size based on current settings
+      status: 'estimating', 
       estimatedSize: null,
       compressedBlob: null,
       compressedUrl: null,
@@ -114,7 +107,6 @@ export default function App() {
 
     setFiles(prev => [...prev, ...newFileObjects]);
 
-    // Immediately calculate estimated sizes for the newly added files
     for (const fileObj of newFileObjects) {
       const blob = await generateCompressedBlob(fileObj.originalFile, quality, format, scale);
       setFiles(prev => prev.map(f => {
@@ -122,7 +114,7 @@ export default function App() {
           return {
             ...f,
             status: 'pending',
-            estimatedSize: blob ? blob.size : null
+            estimatedSize: blob ? blob.size : null,
           };
         }
         return f;
@@ -130,9 +122,8 @@ export default function App() {
     }
   };
 
-  // Effect to recalculate sizes when quality or format changes
+  // Effect to recalculate sizes when quality, format, or scale changes
   useEffect(() => {
-    // Only recalculate for files that aren't 'done' or 'error'
     const recalculateEstimates = async () => {
       const filesToUpdate = files.filter(f => 
         (f.status === 'pending' || f.status === 'estimating') && 
@@ -141,7 +132,6 @@ export default function App() {
 
       if (filesToUpdate.length === 0) return;
 
-      // Mark as estimating
       setFiles(prev => prev.map(f => 
         filesToUpdate.some(updateFile => updateFile.id === f.id) 
           ? { ...f, status: 'estimating' } 
@@ -152,7 +142,6 @@ export default function App() {
         const blob = await generateCompressedBlob(fileObj.originalFile, quality, format, scale);
         setFiles(prev => prev.map(f => {
           if (f.id === fileObj.id) {
-            // If it was already processed, reset it to pending since settings changed
             return {
               ...f,
               status: 'pending',
@@ -160,7 +149,7 @@ export default function App() {
               outputFormat: format,
               lastCalculatedQuality: quality,
               lastCalculatedScale: scale,
-              compressedBlob: null, // Clear finalized data
+              compressedBlob: null,
               compressedUrl: null
             };
           }
@@ -169,14 +158,12 @@ export default function App() {
       }
     };
 
-    // Debounce the recalculation so it doesn't fire wildly while dragging the slider
     const timeoutId = setTimeout(() => {
       recalculateEstimates();
-    }, 300); // 300ms delay
+    }, 300); 
 
     return () => clearTimeout(timeoutId);
   }, [quality, format, scale, files]);
-
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
@@ -185,7 +172,7 @@ export default function App() {
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFilesAdded(e.dataTransfer.files);
     }
-  }, []);
+  }, [quality, format, scale]);
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
@@ -229,32 +216,32 @@ export default function App() {
     setIsProcessingAll(true);
     
     for (let i = 0; i < files.length; i++) {
-      if (files[i].status === 'pending' || files[i].status === 'done') {
-        
+      if (files[i].status !== 'error' && files[i].status !== 'processing') {
         setFiles(prev => prev.map((f, index) => index === i ? { ...f, status: 'processing' } : f));
         
         const blob = await generateCompressedBlob(files[i].originalFile, quality, format, scale);
         
         if (blob) {
-           const compressedUrl = URL.createObjectURL(blob);
-           setFiles(prev => prev.map((f, index) => index === i ? {
-            ...f,
+          const compressedUrl = URL.createObjectURL(blob);
+          setFiles(prev => prev.map((f, index) => index === i ? { 
+            ...f, 
+            status: 'done',
             compressedBlob: blob,
-            estimatedSize: blob.size, // The actual size is exactly the estimated size now
             compressedUrl: compressedUrl,
-            status: 'done'
-           } : f));
+            compressedSize: blob.size,
+            estimatedSize: blob.size,
+            outputFormat: format
+          } : f));
         } else {
-           setFiles(prev => prev.map((f, index) => index === i ? { ...f, status: 'error' } : f));
+          setFiles(prev => prev.map((f, index) => index === i ? { ...f, status: 'error' } : f));
         }
       }
     }
-    
     setIsProcessingAll(false);
   };
 
   const downloadFile = (fileObj) => {
-    if (!fileObj.compressedBlob) return;
+    if (!fileObj.compressedUrl) return; 
     
     const extension = fileObj.outputFormat === 'jpeg' ? 'jpg' : 'webp';
     const originalNameWithoutExt = fileObj.name.substring(0, fileObj.name.lastIndexOf('.')) || fileObj.name;
@@ -268,7 +255,6 @@ export default function App() {
     document.body.removeChild(link);
   };
 
-  // Calculate global stats based on estimated or actual compressed sizes
   const totalOriginalSize = files.reduce((acc, file) => acc + file.originalSize, 0);
   const totalCompressedSize = files.reduce((acc, file) => {
     const sizeToUse = file.compressedBlob ? file.compressedBlob.size : (file.estimatedSize || file.originalSize);
@@ -405,9 +391,6 @@ export default function App() {
                 )}
                 <span>{isProcessingAll ? 'Processing...' : 'Finalize & Download'}</span>
               </button>
-              <p className="text-xs text-center text-purple-300/60 mt-4 leading-relaxed">
-                Changes above are estimated in real-time. Click Finalize to generate download links.
-              </p>
             </div>
           </div>
         </div>
