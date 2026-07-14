@@ -15,3 +15,10 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Shared status badge base style (used in FileRow) */
+@layer components {
+  .badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded border text-[10px] font-bold uppercase tracking-wider;
+  }
+}

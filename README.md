@@ -1,65 +1,125 @@
-# Py-Image: Real-Time Image Compressor 🖼️✨
+# PY-IMAGE Real-Time Compressor ⚡🖼️
 
-A sleek, highly optimized, and purely client-side React application that allows users to batch-compress images, change formats, and resize dimensions. Inspired by clean, modern tools like Caesium, but built to run entirely in your browser with zero server uploads required, providing **real-time size estimations** before finalizing the compression.
+A fast, premium, client-side browser image compressor tailored for government document compliance and bulk image optimization. Built with **React 18 + Vite + TailwindCSS 3**.
 
-## Live Demo
-https://py-image-compressor.vercel.app/
+![PY-IMAGE Screenshot](./screenshot.png)
 
-## 🚀 Features
+---
 
-* **100% Secure & Private:** All image processing (resizing, formatting, compressing) happens entirely locally on your device. No images are ever uploaded to a remote server.
-* **Real-Time Size Estimation:** Adjust the quality or scale sliders and instantly see the estimated final file size and savings percentage—before clicking compress.
-* **Modern UI:** Features a premium deep-purple glassmorphism aesthetic with vibrant red/pink accents, built with Tailwind CSS.
-* **Format Conversion:** Easily convert heavy PNGs or JPEGs into optimized WebP or JPEG formats.
-* **Dimension Scaling:** Resize the physical dimensions of the image (10% to 100%) alongside compression quality.
-* **Batch Processing & Direct Downloads:** Drag and drop multiple files, process them all at once with global settings, and download them directly to your machine.
+## ✨ Features
 
-## 🛠️ Tech Stack
+*   **🔒 100% Client-Side Privacy**: All compression, resizing, and optimizations are computed entirely inside your browser. No files are ever uploaded to a backend or server.
+*   **📋 DSSB Govt-Compliant Profiles**: Auto-targets specific dimension and file size configurations required by government portal forms:
+    *   **Photo**: 480 × 672 pixels (5 × 7 inches) | 50 KB – 300 KB (JPEG)
+    *   **Signature**: 140 × 110 pixels | 10 KB – 40 KB (JPEG)
+    *   **Left Thumb**: 110 × 140 pixels | 10 KB – 40 KB (JPEG)
+    *   **Right Thumb**: 110 × 140 pixels | 10 KB – 40 KB (JPEG)
+*   **🔍 Draggable Before/After Comparison**: Compare original and compressed details side-by-side using an interactive split-view slider (mouse & touch friendly).
+*   **⚡ Smart Size Targeter**: Employs an iterative **binary search algorithm** to automatically fine-tune JPEG/WebP export quality levels until the image size fits perfectly in the target profile's KB range.
+*   **📦 Batch ZIP Downloader**: Download multiple completed images grouped automatically into a single, structured `.zip` folder.
+*   **Manual Mode Controls**:
+    *   **Format Options**: Export to JPEG, WebP, or PNG formats.
+    *   **Image Scaling**: Resize height and width dimensions from 10% to 100%.
+    *   **Compression Quality**: Lossy quality sliders from 10% to 100% (automatically hidden for PNG).
 
-* **Framework:** React (via Vite)
-* **Styling:** Tailwind CSS
-* **Icons:** Lucide React
-* **Image Processing:** HTML5 `<canvas>` API & `FileReader` API
-* **Deployment:** Vercel / Netlify / GitHub Pages
+---
 
-## 💻 Getting Started
+## 🛠️ Technology Stack
 
-To run this project locally on your machine, follow these steps:
+*   **Frontend Library**: React 18
+*   **Build Utility**: Vite 5
+*   **Styling**: TailwindCSS 3
+*   **Icons**: Lucide React
+*   **Archive Utility**: JSZip
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-Make sure you have [Node.js](https://nodejs.org/) installed on your machine.
+
+*   [Node.js](https://nodejs.org) (v18 or higher recommended)
+*   npm or yarn
 
 ### Installation
 
-1. **Clone the repository:**
-   ```bash
-   git clone [https://github.com/YOUR_USERNAME/py-image.git](https://github.com/YOUR_USERNAME/py-image.git)
-   cd py-image
-   ```
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/PrinceBad/Py-Image-Compressor.git
+    cd Py-Image-Compressor
+    ```
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
 
-3. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
-   The app will be available at `http://localhost:5173`.
+3.  Run the local development server:
+    ```bash
+    npm run dev
+    ```
 
-## 💡 How it Works (Under the Hood)
+4.  Build for production:
+    ```bash
+    npm run build
+    ```
 
-Py-Image leverages the browser's native capabilities to avoid server costs and latency:
-1. **`FileReader`** loads the dropped images into memory.
-2. A debounced **Background Task** draws the image to an off-screen HTML5 `<canvas>` whenever the user tweaks a slider.
-3. `canvas.toBlob(callback, mimeType, quality)` is used to calculate the exact resulting byte size dynamically.
-4. When the user clicks **Finalize & Download**, the blobs are converted into downloadable `URL.createObjectURL` links.
+---
 
-## 🤝 Contributing
+## 📁 Project Structure
 
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/YOUR_USERNAME/py-image/issues).
+```bash
+py-image-compressor/
+├── 📁 public/                 # Static assets (Favicons, images)
+├── 📁 src/                    # Main application source code
+│   ├── 📁 components/         # Modular user interface components
+│   │   ├── 📄 Dropzone.jsx       # Drag-and-drop file upload target area
+│   │   ├── 📄 FileRow.jsx        # Table row showing individual file stats & actions
+│   │   ├── 📄 FileTable.jsx      # Queue layout structure containing all files
+│   │   ├── 📄 Header.jsx         # App top-bar logo, theme stats & estimates
+│   │   ├── 📄 PreviewModal.jsx   # Draggable split-pane before/after visual comparer
+│   │   └── 📄 SettingsPanel.jsx  # Main controls & DSSB profiles list selection
+│   ├── 📁 constants/          # Application-wide static data
+│   │   └── 📄 profiles.js        # Government DSSB file specifications
+│   ├── 📁 utils/              # Pure utility functions & core engine algorithms
+│   │   ├── 📄 compression.js     # Image resizing & binary search canvas compression
+│   │   └── 📄 helpers.js         # File size formatters & savings calculators
+│   ├── 📄 App.jsx             # Main application driver & central state orchestrator
+│   ├── 📄 main.jsx            # Entry script that boots React into index.html
+│   └── 📄 index.css           # Styling directives including Tailwind layers
+├── 📄 index.html              # HTML core shell template
+├── 📄 package.json            # Scripts and third-party dependencies configuration
+├── 📄 tailwind.config.js      # Tailwind UI design tokens & theme setup
+├── 📄 vite.config.js          # Vite build pack configuration file
+└── 📄 README.md               # Project documentation
+```
 
-## 📝 License
+---
 
-Distributed under the MIT License. See `LICENSE` for more information.
+## 📐 Application Architecture & Flow
+
+```mermaid
+graph TD
+    %% Component Relationships
+    App[App.jsx] --> Header[Header.jsx]
+    App --> SettingsPanel[SettingsPanel.jsx]
+    App --> Dropzone[Dropzone.jsx]
+    App --> FileTable[FileTable.jsx]
+    App --> PreviewModal[PreviewModal.jsx]
+    
+    FileTable --> FileRow[FileRow.jsx]
+    
+    %% Utility consumption
+    App -. Uses .-> Compression[utils/compression.js]
+    App -. Uses .-> Helpers[utils/helpers.js]
+    App -. Uses .-> ProfilesConfig[constants/profiles.js]
+    
+    FileRow -. Uses .-> ProfilesConfig
+    
+    classDef component fill:#2a1b4e,stroke:#f00b51,stroke-width:2px,color:#fff;
+    classDef utility fill:#111,stroke:#00ffcc,stroke-width:1px,color:#ccc;
+    
+    class App,Header,SettingsPanel,Dropzone,FileTable,FileRow,PreviewModal component;
+    class Compression,Helpers,ProfilesConfig utility;
+```
+
