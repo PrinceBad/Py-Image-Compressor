@@ -127,3 +127,5 @@ graph TD
     class Compression,Helpers,ProfilesConfig utility;
 ```
 
+
+<!-- Engine: In-memory OffscreenCanvas compression notes -->
