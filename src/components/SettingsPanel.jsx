@@ -183,6 +183,30 @@ export default function SettingsPanel({
                   {quality}%
                 </span>
               </div>
+
+              {/* Quick Quality Presets */}
+              <div className="grid grid-cols-4 gap-1 mb-3">
+                {[
+                  { label: 'Ultra', val: 90 },
+                  { label: 'Balanced', val: 80 },
+                  { label: 'Web', val: 65 },
+                  { label: 'Max', val: 45 }
+                ].map((p) => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => setQuality(p.val)}
+                    className={`text-[10px] font-bold py-1 rounded border transition-all ${
+                      quality === p.val
+                        ? 'bg-[#f00b51] text-white border-[#f00b51]'
+                        : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    {p.label} ({p.val}%)
+                  </button>
+                ))}
+              </div>
+
               <input
                 type="range" min="10" max="100"
                 value={quality}
@@ -199,14 +223,32 @@ export default function SettingsPanel({
 
       {/* ── Actions ── */}
       <div className="border-t border-white/10 mt-5 pt-4 space-y-3">
-        {files.length > 0 && (
-          <div className="bg-black/30 rounded-lg p-3 border border-white/5 text-center shadow-[inset_0_0_15px_rgba(0,0,0,0.5)]">
-            <p className="text-[10px] text-gray-400 mb-1 uppercase tracking-wider font-bold">
-              Total Est. Size
-            </p>
-            <p className="text-xl font-bold text-[#00ffcc]">{formatBytes(totalCompressedSize)}</p>
-          </div>
-        )}
+        {files.length > 0 && (() => {
+          const totalOriginalSize = files.reduce((sum, f) => sum + (f.originalSize || 0), 0);
+          const savingsBytes = Math.max(0, totalOriginalSize - totalCompressedSize);
+          const savingsPercent = totalOriginalSize > 0 ? Math.round((savingsBytes / totalOriginalSize) * 100) : 0;
+
+          return (
+            <div className="bg-black/30 rounded-lg p-3 border border-white/5 text-center shadow-[inset_0_0_15px_rgba(0,0,0,0.5)]">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">
+                  Total Est. Size
+                </span>
+                {savingsPercent > 0 && (
+                  <span className="text-[10px] bg-[#00ffcc]/20 text-[#00ffcc] font-bold px-1.5 py-0.5 rounded">
+                    -{savingsPercent}% Saved
+                  </span>
+                )}
+              </div>
+              <p className="text-xl font-bold text-[#00ffcc]">{formatBytes(totalCompressedSize)}</p>
+              {savingsBytes > 0 && (
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Reduced from {formatBytes(totalOriginalSize)}
+                </p>
+              )}
+            </div>
+          );
+        })()}
 
         <button
           onClick={onProcessAll}

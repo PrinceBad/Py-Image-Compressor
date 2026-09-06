@@ -436,6 +436,9 @@ export default function App() {
         <PreviewModal
           file={previewFile}
           onClose={() => setPreviewFile(null)}
+          globalQuality={quality}
+          globalFormat={format}
+          globalScale={scale}
         />
       )}
     </div>

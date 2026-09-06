@@ -1,52 +1,108 @@
-// Core compression engine using HTML5 Canvas API.
-// Supports percentage-based scaling (manual mode) and absolute-dimension
-// profile mode with binary-search quality targeting.
+// Core high-performance compression engine.
+// Uses createImageBitmap and OffscreenCanvas where available for fast, low-memory processing.
+// Supports percentage-based scaling, modern format encoding (JPEG, WebP, PNG),
+// and binary-search target file size profiling.
 
-const canvasToBlob = (canvas, mimeType, quality) =>
-  new Promise((resolve) => canvas.toBlob((b) => resolve(b), mimeType, quality));
+const hasOffscreenCanvas = typeof OffscreenCanvas !== 'undefined';
 
-const loadImage = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = e.target.result;
+/**
+ * Loads an image source into an ImageBitmap or HTMLImageElement.
+ * Uses createImageBitmap if available (3x faster, avoids huge base64 strings).
+ */
+const loadImageSource = async (file) => {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(file);
+      return { source: bitmap, isBitmap: true, width: bitmap.width, height: bitmap.height };
+    } catch (e) {
+      console.warn('createImageBitmap failed, falling back to Image element:', e);
+    }
+  }
+
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve({ source: img, isBitmap: false, width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
     };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    img.onerror = (err) => {
+      URL.revokeObjectURL(objectUrl);
+      reject(err);
+    };
+    img.src = objectUrl;
   });
+};
 
-const buildCanvas = (img, width, height, format) => {
-  const canvas = document.createElement('canvas');
+/**
+ * Converts a canvas (or OffscreenCanvas) to a Blob.
+ */
+const convertToBlob = async (canvas, isOffscreen, mimeType, quality) => {
+  if (isOffscreen && canvas.convertToBlob) {
+    return await canvas.convertToBlob({ type: mimeType, quality });
+  }
+  return new Promise((resolve) => canvas.toBlob((b) => resolve(b), mimeType, quality));
+};
+
+/**
+ * Draws image source onto a canvas with background color if required (e.g. JPEG).
+ */
+const renderToCanvas = (sourceObj, width, height, format) => {
+  let canvas;
+  let isOffscreen = false;
+
+  if (hasOffscreenCanvas) {
+    try {
+      canvas = new OffscreenCanvas(width, height);
+      isOffscreen = true;
+    } catch {
+      canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+    }
+  } else {
+    canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+  }
+
   const ctx = canvas.getContext('2d');
-  canvas.width = width;
-  canvas.height = height;
-  // JPEG needs a white background (no transparency)
+  
+  // Format-specific background: JPEG doesn't support transparency, fill with pure white
   if (format === 'jpeg') {
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, width, height);
   }
-  ctx.drawImage(img, 0, 0, width, height);
-  return canvas;
+
+  // Draw scaled image
+  ctx.drawImage(sourceObj.source, 0, 0, width, height);
+  return { canvas, isOffscreen };
 };
 
 /**
  * Generate a compressed blob using percentage scaling (manual mode).
- * PNG output ignores the quality parameter (lossless).
+ * Supports JPEG, WebP, and PNG.
  */
-export const generateCompressedBlob = async (file, quality, format, scale = 100) => {
+export const generateCompressedBlob = async (file, quality, format = 'jpeg', scale = 100) => {
+  let loaded = null;
   try {
-    const img = await loadImage(file);
-    const w = Math.max(1, Math.floor(img.width * (scale / 100)));
-    const h = Math.max(1, Math.floor(img.height * (scale / 100)));
-    const canvas = buildCanvas(img, w, h, format);
+    loaded = await loadImageSource(file);
+    const w = Math.max(1, Math.floor(loaded.width * (scale / 100)));
+    const h = Math.max(1, Math.floor(loaded.height * (scale / 100)));
+
+    const { canvas, isOffscreen } = renderToCanvas(loaded, w, h, format);
     const mimeType = `image/${format}`;
-    const q = format === 'png' ? undefined : quality / 100;
-    return await canvasToBlob(canvas, mimeType, q);
-  } catch {
+    const q = format === 'png' ? undefined : Math.max(0.01, Math.min(1.0, quality / 100));
+
+    const blob = await convertToBlob(canvas, isOffscreen, mimeType, q);
+    return blob;
+  } catch (err) {
+    console.error('Compression error:', err);
     return null;
+  } finally {
+    if (loaded && loaded.isBitmap && loaded.source.close) {
+      loaded.source.close();
+    }
   }
 };
 
@@ -54,14 +110,13 @@ export const generateCompressedBlob = async (file, quality, format, scale = 100)
  * Generate a blob for a DSSB profile.
  * Uses binary search on quality (1-100) to find a quality level
  * that produces a file size within [profile.minSize, profile.maxSize].
- *
- * Returns { blob, quality, withinRange, tooSmall, tooLarge } or null on error.
  */
 export const generateProfileBlob = async (file, profile) => {
+  let loaded = null;
   try {
     const { width, height, format, minSize, maxSize } = profile;
-    const img = await loadImage(file);
-    const canvas = buildCanvas(img, width, height, format);
+    loaded = await loadImageSource(file);
+    const { canvas, isOffscreen } = renderToCanvas(loaded, width, height, format);
     const mimeType = `image/${format}`;
 
     let low = 1;
@@ -71,14 +126,13 @@ export const generateProfileBlob = async (file, profile) => {
 
     while (low <= high) {
       const mid = Math.floor((low + high) / 2);
-      const blob = await canvasToBlob(canvas, mimeType, mid / 100);
+      const blob = await convertToBlob(canvas, isOffscreen, mimeType, mid / 100);
       if (!blob) break;
 
       lastBlob = blob;
       lastQuality = mid;
 
       if (blob.size >= minSize && blob.size <= maxSize) {
-        // Found a quality within target range
         return { blob, quality: mid, withinRange: true, tooSmall: false, tooLarge: false };
       }
 
@@ -89,7 +143,7 @@ export const generateProfileBlob = async (file, profile) => {
       }
     }
 
-    // Return best approximation even if not in range
+    // Return closest result
     if (lastBlob) {
       return {
         blob: lastBlob,
@@ -100,7 +154,12 @@ export const generateProfileBlob = async (file, profile) => {
       };
     }
     return null;
-  } catch {
+  } catch (err) {
+    console.error('Profile compression error:', err);
     return null;
+  } finally {
+    if (loaded && loaded.isBitmap && loaded.source.close) {
+      loaded.source.close();
+    }
   }
 };
