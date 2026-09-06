@@ -1,5 +1,9 @@
 # PY-IMAGE Real-Time Compressor ⚡🖼️
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Vercel-00ffcc?style=for-the-badge&logo=vercel&logoColor=white)](https://py-image-compressor.vercel.app/)
+
+> 🌐 **Live Application**: [https://py-image-compressor.vercel.app/](https://py-image-compressor.vercel.app/)
+
 A fast, premium, client-side browser image compressor tailored for government document compliance and bulk image optimization. Built with **React 18 + Vite + TailwindCSS 3**.
 
 ![PY-IMAGE Screenshot](./screenshot.png)

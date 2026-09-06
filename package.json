@@ -2,6 +2,7 @@
   "name": "py-image-compressor",
   "private": true,
   "version": "0.0.0",
+  "homepage": "https://py-image-compressor.vercel.app/",
   "type": "module",
   "scripts": {
     "dev": "vite",
