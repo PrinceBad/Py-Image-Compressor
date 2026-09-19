@@ -1,6 +1,9 @@
 # PY-IMAGE Real-Time Compressor ⚡🖼️
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Vercel-00ffcc?style=for-the-badge&logo=vercel&logoColor=white)](https://py-image-compressor.vercel.app/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![React](https://img.shields.io/badge/React-18.2-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-5.0-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
 
 > 🌐 **Live Application**: [https://py-image-compressor.vercel.app/](https://py-image-compressor.vercel.app/)
 
@@ -127,5 +130,21 @@ graph TD
     class Compression,Helpers,ProfilesConfig utility;
 ```
 
+---
+
+## 🌐 Browser Compatibility
+
+| Browser | Supported | OffscreenCanvas Acceleration | WebP / PNG Export |
+| :--- | :---: | :---: | :---: |
+| **Google Chrome / Chromium** | ✅ | Full Support | ✅ Full |
+| **Microsoft Edge** | ✅ | Full Support | ✅ Full |
+| **Mozilla Firefox** | ✅ | Full Support (v105+) | ✅ Full |
+| **Apple Safari** | ✅ | Full Support (iOS 16.4+ / macOS 13+) | ✅ Full |
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE) - see the LICENSE file for details.
 
 <!-- Engine: In-memory OffscreenCanvas compression notes -->
